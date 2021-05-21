@@ -1,3 +1,5 @@
-Mode: layer_outputs
+Target: layer_outputs
+Mode: single
 Type: bitflips
 Amount: 1
+Bit: N
