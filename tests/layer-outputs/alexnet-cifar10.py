@@ -7,7 +7,7 @@ from tensorflow import keras
 
 import time, sys, random
 
-from src import tfi
+from src import tensorfi2 as tfi
 
 (train_images, train_labels), (test_images, test_labels) = keras.datasets.cifar10.load_data()
 

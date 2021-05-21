@@ -10,7 +10,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input, decode_predict
 
 import time, sys, math
 
-from src import tfi
+from src import tensorfi2 as tfi
 
 model = tf.keras.applications.VGG16(
     include_top=True, weights='imagenet', input_tensor=None,

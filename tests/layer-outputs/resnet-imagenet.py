@@ -10,7 +10,7 @@ from tensorflow.keras.applications.resnet import preprocess_input, decode_predic
 
 import time, sys, math
 
-from src import tfi
+from src import tensorfi2 as tfi
 
 model = tf.keras.applications.ResNet50(
     include_top=True, weights='imagenet', input_tensor=None,

@@ -8,7 +8,7 @@ import numpy as np
 
 import time, sys, math, random
 
-from src import tfi
+from src import tensorfi2 as tfi
 
 (train_images, train_labels), (test_images, test_labels) = datasets.fashion_mnist.load_data()
 train_images, test_images = train_images / 255.0, test_images / 255.0
