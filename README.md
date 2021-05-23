@@ -50,9 +50,9 @@ The fault injector is easily configurable with YAML.
 
 ML models are made up of input data, weight matrices that are learned during training, and activation matrices that are computed from the weights and data. While TensorFI 1 targeted only the activation matrices for fault injection, TensorFI 2 is capable of injecting faults into both the weight and activation matrices. These are the two injection targets respectively.
 
-1. Injection into the *layer states* that hold the learned weights and biases is static and can be done before the inference runs. The methodology is further explained in [tests/layer-states](https://github.com/DependableSystemsLab/TensorFI2/tree/master/tests/layer-states) along with the relevant tests.
+1. Injection into the *layer states* that hold the learned weights and biases is static and can be done before the inference runs. The methodology is further explained in [experiments/layer-states](https://github.com/DependableSystemsLab/TensorFI2/tree/master/experiments/layer-states) along with the relevant experiments.
 
-2. Injection into the *layer outputs* that hold the activations or computations is dynamic and is done during the inference runs. The methodology is further explained in [tests/layer-outputs](https://github.com/DependableSystemsLab/TensorFI2/tree/master/tests/layer-outputs) along with the relevant tests.
+2. Injection into the *layer outputs* that hold the activations or computations is dynamic and is done during the inference runs. The methodology is further explained in [experiments/layer-outputs](https://github.com/DependableSystemsLab/TensorFI2/tree/master/experiments/layer-outputs) along with the relevant experiments.
 
 Both types of injection support single and multiple faults along with three types of faults - zeros, random value replacements and bit-flips.
 
@@ -77,7 +77,7 @@ Installation has just two steps - downloading the source and adding it to `PATH`
 
 ### Configuration
 
-Let's see an example of how to inject a bit-flip into a layer state in the model. Go to [tests/layer-states](https://github.com/DependableSystemsLab/TensorFI2/blob/master/tests/layer-states) and set the sample.yaml file in [tests/layer-states/confFiles](https://github.com/DependableSystemsLab/TensorFI2/tree/master/tests/layer-states/confFiles) with the following configuration:
+Let's see an example of how to inject a bit-flip into a layer state in the model. Go to [experiments/layer-states](https://github.com/DependableSystemsLab/TensorFI2/blob/master/experiments/layer-states) and set the sample.yaml file in [experiments/layer-states/confFiles](https://github.com/DependableSystemsLab/TensorFI2/tree/master/experiments/layer-states/confFiles) with the following configuration:
 
 ##### sample.yaml
     
@@ -92,7 +92,7 @@ This means that a single bit (chosen randomly as `N` is specified for `Bit`) wil
 
 When running from the examples in this directory, this is the YAML file that gets picked up by the injector.
 
-For further understanding of what each label and values mean, navigate to [conf/](https://github.com/DependableSystemsLab/TensorFI2/tree/master/conf) and check out how to set the fault injection configuration for the tests you plan to run.
+For further understanding of what each label and values mean, navigate to [conf/](https://github.com/DependableSystemsLab/TensorFI2/tree/master/conf) and check out how to set the fault injection configuration for the tests or experiments you plan to run.
 
 ### Usage
 
@@ -103,7 +103,7 @@ Run the test to observe the fault injection. For example, let's say we run the s
 `result/` is the directory where you want to store the output of the run.
 `1` is the number of fault injections you want to run and `10` is the number of test inputs to evaluate each of the fault injection runs.
 
-To use TensorFI 2 in a generic ML model (that is not in [tests](https://github.com/DependableSystemsLab/TensorFI2/blob/master/tests/)), just add two lines of code to the model.
+To use TensorFI 2 in a generic ML model (that is not in [experiments](https://github.com/DependableSystemsLab/TensorFI2/blob/master/experiments/)), just add two lines of code to the model.
 
 1. At the top, import tensorfi2 from [src](https://github.com/DependableSystemsLab/TensorFI2/tree/master/src).
 
@@ -119,7 +119,7 @@ To use TensorFI 2 in a generic ML model (that is not in [tests](https://github.c
 
 `model` is the defined Keras model and `confFile` argument requires the YAML configuration file that contains injection instructions.
 
-The above line of injection code is for injection into the layer states with the particular configuration listed previously. Refer the READMEs in [conf](https://github.com/DependableSystemsLab/TensorFI2/tree/master/conf), [tests](https://github.com/DependableSystemsLab/TensorFI2/tree/master/tests) and [casestudies](https://github.com/DependableSystemsLab/TensorFI2/tree/master/casestudies) directories for further usage and experiments with the tool.
+The above line of injection code is for injection into the layer states with the particular configuration listed previously. Refer the READMEs in [conf](https://github.com/DependableSystemsLab/TensorFI2/tree/master/conf), [experiments](https://github.com/DependableSystemsLab/TensorFI2/tree/master/experiments) and [case-studies](https://github.com/DependableSystemsLab/TensorFI2/tree/master/case-studies) directories for further usage and experiments with the tool.
 
 ### Contributing
 

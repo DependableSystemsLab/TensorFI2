@@ -6,7 +6,7 @@ x = np.arange(43)
 
 y=[]
 for i in range(1,11):
-	fl = 'res-cs2-conv1/res-cs2/b'+str(i)+'0/res.csv'
+	fl = 'res-conv1/b'+str(i)+'0/res.csv'
 	f = open(fl)
 	l = f.readlines()
 	a = l[0]
@@ -26,5 +26,5 @@ ax.set(xlabel="Class indices of traffic signs", ylabel="Number of correct predic
 	title="Correct predictions for varying amount of bitflips vs GTSRB dataset classes")
 ax.grid()
 
-# fig.savefig("TFI2-CS2-2.png")
+# fig.savefig("TFI2-CS1.png")
 plt.show()
