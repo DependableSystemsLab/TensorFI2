@@ -77,7 +77,7 @@ Installation has just two steps - downloading the source and adding it to `PATH`
 
 ### Configuration
 
-Let's see an example of how to inject a bit-flip into a layer state in the model. Go to [tests/layer-states](https://github.com/DependableSystemsLab/TensorFI2/blob/master/tests/layer-outputs) and set the sample.yaml file in [tests/layer-states/confFiles](https://github.com/DependableSystemsLab/TensorFI2/tree/master/tests/layer-states/confFiles) with the following configuration:
+Let's see an example of how to inject a bit-flip into a layer state in the model. Go to [tests/layer-states](https://github.com/DependableSystemsLab/TensorFI2/blob/master/tests/layer-states) and set the sample.yaml file in [tests/layer-states/confFiles](https://github.com/DependableSystemsLab/TensorFI2/tree/master/tests/layer-states/confFiles) with the following configuration:
 
 ##### sample.yaml
     
