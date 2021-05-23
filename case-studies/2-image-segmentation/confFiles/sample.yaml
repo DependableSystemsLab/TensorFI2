@@ -1,4 +1,0 @@
-Mode: layer_states
-Type: bitflips
-Amount: 1000
-Layer: N # For injection in one of the 5 convolutional layers, N should be in the range []
