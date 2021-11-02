@@ -77,13 +77,13 @@ for i in range(numFaults):
     sdc = 0.
     for i in ind:
         res = tfi.inject(model=model, x_test=test_images[i:i+1], confFile=conf)
-        if(res != test_labels[i:i+1]):
+        if(res.get_label() != test_labels[i:i+1]):
             sdc = sdc + 1.
-    f.write(str(sdc/numInjections))
-    f.write("\n")
+    #f.write(str(sdc/numInjections))
+    #f.write("\n")
     totsdc = totsdc + sdc
-f.write("\n")
+#f.write("\n")
 f.write(str(totsdc/(numFaults*numInjections)))
 f.write("\n")
-f.write("Time for %d injections: %f seconds" % (numFaults*numInjections, time.time() - start))
+#f.write("Time for %d injections: %f seconds" % (numFaults*numInjections, time.time() - start))
 f.close()

@@ -12,289 +12,329 @@ import random, math
 from src import config
 
 def bitflip(f, pos):
-	
-	""" Single bit-flip in 32 bit floats """
+        
+        """ Single bit-flip in 32 bit floats """
 
-	f_ = pack('f', f)
-	b = list(unpack('BBBB', f_))
-	[q, r] = divmod(pos, 8)
-	b[q] ^= 1 << r
-	f_ = pack('BBBB', *b)
-	f = unpack('f', f_)
-	return f[0]
+        f_ = pack('f', f)
+        b = list(unpack('BBBB', f_))
+        [q, r] = divmod(pos, 8)
+        b[q] ^= 1 << r
+        f_ = pack('BBBB', *b)
+        f = unpack('f', f_)
+        return f[0]
 
 class inject():
-	def __init__(
-		self, model, confFile, log_level="ERROR", **kwargs
-		):
 
-		# Logging setup
-		logging.basicConfig()
-		logging.getLogger().setLevel(log_level)
-		logging.debug("Logging level set to {0}".format(log_level))
+        def get_label(self):
+                return self.result
 
-		# Retrieve config params
-		fiConf = config.config(confFile)
-		self.Model = model # No more passing or using a session variable in TF v2
+        def __init__(
+                self, model, confFile, log_level="ERROR", **kwargs
+                ):
 
-		# Call the corresponding FI function
-		fiFunc = getattr(self, fiConf["Target"])
-		fiFunc(model, fiConf, **kwargs)
+                # Logging setup
+                logging.basicConfig()
+                logging.getLogger().setLevel(log_level)
+                logging.debug("Logging level set to {0}".format(log_level))
 
-	def layer_states(self, model, fiConf, **kwargs):
-		
-		""" FI in layer states """
-		
-		if(fiConf["Mode"] == "single"):
+                # Retrieve config params
+                fiConf = config.config(confFile)
+                self.Model = model # No more passing or using a session variable in TF v2
 
-			""" Single layer fault injection mode """
+                # Call the corresponding FI function
+                fiFunc = getattr(self, fiConf["Target"])
+                self.result = fiFunc(model, fiConf, **kwargs)
 
-			logging.info("Starting fault injection in a random layer")
+        def layer_states(self, model, fiConf, **kwargs):
+                
+                """ FI in layer states """
+                
+                if(fiConf["Mode"] == "single"):
 
-			# Retrieve type and amount of fault
-			fiFault = fiConf["Type"]
-			fiSz = fiConf["Amount"]
+                        """ Single layer fault injection mode """
 
-			# Choose a random layer for injection
-			randnum = random.randint(0, len(model.trainable_variables) - 1)
+                        logging.info("Starting fault injection in a random layer")
 
-			# Get layer states info
-			v = model.trainable_variables[randnum]
-			num = v.shape.num_elements()
+                        # Retrieve type and amount of fault
+                        fiFault = fiConf["Type"]
+                        fiSz = fiConf["Amount"]
 
-			if(fiFault == "zeros"):
-				fiSz = (fiSz * num) / 100
-				fiSz = math.floor(fiSz)
+                        # Choose a random layer for injection
+                        randnum = random.randint(0, len(model.trainable_variables) - 1)
 
-			# Choose the indices for FI
-			ind = random.sample(range(num), fiSz)
+                        # Get layer states info
+                        v = model.trainable_variables[randnum]
+                        num = v.shape.num_elements()
 
-			# Unstack elements into a single dimension
-			elem_shape = v.shape
-			v_ = tf.identity(v)
-			v_ = tf.keras.backend.flatten(v_)
-			v_ = tf.unstack(v_)
+                        if(fiFault == "zeros"):
+                                fiSz = (fiSz * num) / 100
+                                fiSz = math.floor(fiSz)
 
-			# Inject the specified fault into the randomly chosen values
-			if(fiFault == "zeros"):
-				for item in ind:
-					v_[item] = 0.
-			elif(fiFault == "random"):
-				for item in ind:
-					v_[item] = np.random.random()
-			elif(fiFault == "bitflips"):
-				for item in ind:
-					val = v_[item]
-					
-					# If random bit chosen to be flipped
-					if(fiConf["Bit"] == "N"):
-						pos = random.randint(0, 31)
+                        # Choose the indices for FI
+                        ind = random.sample(range(num), fiSz)
 
-					# If bit position specified for flip
-					else:
-						pos = int(fiConf["Bit"])
-					val_ = bitflip(val, pos)
-					v_[item] = val_
+                        # Unstack elements into a single dimension
+                        elem_shape = v.shape
+                        v_ = tf.identity(v)
+                        v_ = tf.keras.backend.flatten(v_)
+                        v_ = tf.unstack(v_)
 
-			# Reshape into original dimensions and store the faulty tensor
-			v_ = tf.stack(v_)
-			v_ = tf.reshape(v_, elem_shape)
-			v.assign(v_)
+                        # Inject the specified fault into the randomly chosen values
+                        if(fiFault == "zeros"):
+                                for item in ind:
+                                        v_[item] = 0.
+                        elif(fiFault == "random"):
+                                for item in ind:
+                                        v_[item] = np.random.random()
+                        elif(fiFault == "bitflips"):
+                                for item in ind:
+                                        val = v_[item]
+                                        
+                                        # If random bit chosen to be flipped
+                                        if(fiConf["Bit"] == "N"):
+                                                pos = random.randint(0, 31)
 
-			logging.info("Completed injections... exiting")
+                                        # If bit position specified for flip
+                                        else:
+                                                pos = int(fiConf["Bit"])
+                                        val_ = bitflip(val, pos)
+                                        v_[item] = val_
 
-		elif(fiConf["Mode"] == "multiple"):
+                        # Reshape into original dimensions and store the faulty tensor
+                        v_ = tf.stack(v_)
+                        v_ = tf.reshape(v_, elem_shape)
+                        v.assign(v_)
 
-			""" Multiple layer fault injection mode """
+                        logging.info("Completed injections... exiting")
 
-			logging.info("Starting fault injection in all layers")
+                elif(fiConf["Mode"] == "multiple"):
 
-			# Retrieve type and amount of fault
-			fiFault = fiConf["Type"]
-			fiSz = fiConf["Amount"]
+                        """ Multiple layer fault injection mode """
 
-			# Loop through each available layer in the model
-			for n in range(len(model.trainable_variables) - 1):
+                        logging.info("Starting fault injection in all layers")
 
-				# Get layer states info
-				v = model.trainable_variables[n]
-				num = v.shape.num_elements()
+                        # Retrieve type and amount of fault
+                        fiFault = fiConf["Type"]
+                        fiSz = fiConf["Amount"]
 
-				if(fiFault == "zeros"):
-					fiSz = (fiSz * num) / 100
-					fiSz = math.floor(fiSz)
+                        # Loop through each available layer in the model
+                        for n in range(len(model.trainable_variables) - 1):
 
-				# Choose the indices for FI
-				ind = random.sample(range(num), fiSz)
+                                # Get layer states info
+                                v = model.trainable_variables[n]
+                                num = v.shape.num_elements()
 
-				# Unstack elements into a single dimension
-				elem_shape = v.shape
-				v_ = tf.identity(v)
-				v_ = tf.keras.backend.flatten(v_)
-				v_ = tf.unstack(v_)
+                                if(fiFault == "zeros"):
+                                        fiSz = (fiSz * num) / 100
+                                        fiSz = math.floor(fiSz)
 
-				# Inject the specified fault into the randomly chosen values
-				if(fiFault == "zeros"):
-					for item in ind:
-						v_[item] = 0.
-				elif(fiFault == "random"):
-					for item in ind:
-						v_[item] = np.random.random()
-				elif(fiFault == "bitflips"):
-					for item in ind:
-						val = v_[item]
+                                # Choose the indices for FI
+                                ind = random.sample(range(num), fiSz)
 
-						# If random bit chosen to be flipped
-						if(fiConf["Bit"] == "N"):
-							pos = random.randint(0, 31)
+                                # Unstack elements into a single dimension
+                                elem_shape = v.shape
+                                v_ = tf.identity(v)
+                                v_ = tf.keras.backend.flatten(v_)
+                                v_ = tf.unstack(v_)
 
-						# If bit position specified for flip
-						else:
-							pos = int(fiConf["Bit"])
-						val_ = bitflip(val, pos)
-						v_[item] = val_
+                                # Inject the specified fault into the randomly chosen values
+                                if(fiFault == "zeros"):
+                                        for item in ind:
+                                                v_[item] = 0.
+                                elif(fiFault == "random"):
+                                        for item in ind:
+                                                v_[item] = np.random.random()
+                                elif(fiFault == "bitflips"):
+                                        for item in ind:
+                                                val = v_[item]
 
-				# Reshape into original dimensions and store the faulty tensor
-				v_ = tf.stack(v_)
-				v_ = tf.reshape(v_, elem_shape)
-				v.assign(v_)
+                                                # If random bit chosen to be flipped
+                                                if(fiConf["Bit"] == "N"):
+                                                        pos = random.randint(0, 31)
 
-			logging.info("Completed injections... exiting")
+                                                # If bit position specified for flip
+                                                else:
+                                                        pos = int(fiConf["Bit"])
+                                                val_ = bitflip(val, pos)
+                                                v_[item] = val_
+
+                                # Reshape into original dimensions and store the faulty tensor
+                                v_ = tf.stack(v_)
+                                v_ = tf.reshape(v_, elem_shape)
+                                v.assign(v_)
+
+                        logging.info("Completed injections... exiting")
 
 
-	def layer_outputs(self, model, fiConf, **kwargs):
+        def layer_outputs(self, model, fiConf, **kwargs):
 
-		""" FI in layer computations/outputs """
+                """ FI in layer computations/outputs """
 
-		if(fiConf["Mode"] == "single"):
+                if(fiConf["Mode"] == "single"):
 
-			""" Single layer fault injection mode """
+                        """ Single layer fault injection mode """
 
-			logging.info("Starting fault injection in a random layer")
+                        logging.info("Starting fault injection in a random layer")
 
-			# Retrieve type and amount of fault
-			fiFault = fiConf["Type"]
-			fiSz = fiConf["Amount"]
+                        # Retrieve type and amount of fault
+                        fiFault = fiConf["Type"]
+                        fiSz = fiConf["Amount"]
 
-			# Get the input for which dynamic injection is to be done
-			x_test = kwargs["x_test"]
+                        # Get the input for which dynamic injection is to be done
+                        x_test = kwargs["x_test"]
 
-			# Choose a random layer for injection
-			randnum = random.randint(0, len(model.layers) - 2)
 
-			fiLayer = model.layers[randnum]
+                        randnum = -1
+                        if fiConf["FIMode"].lower() in "random":
+                                # Choose a random layer for injection
+                                randnum = random.randint(0, len(model.layers) - 3)
+                                fiLayer = model.layers[randnum]
+                        else:
+                                layer_instance_counter = 0
+                                for layer in model.layers:
+                                        randnum = randnum + 1
+                                        if (fiConf["LayerName"].lower() in layer.name):
+                                                layer_instance_counter = layer_instance_counter + 1
+                                                if (int(fiConf["LayerInstanceNumber"]) == layer_instance_counter):
+                                                        fiLayer = layer
+                                                        break
 
-			# Get the outputs of the chosen layer
-			get_output = K.function([model.layers[0].input], [fiLayer.output])
-			fiLayerOutputs = get_output([x_test])
+                        if fiLayer == None:
+                                print("Couldn't find the required layer. Please double check: LayerInstanceNumber and LayerName")
+                                exit(1)
 
-			# Unstack elements into a single dimension
-			elem_shape = fiLayerOutputs[0].shape
-			fiLayerOutputs[0] = fiLayerOutputs[0].flatten()
-			num = fiLayerOutputs[0].shape[0]
+                        #print("Injecting fault in: " + str(fiLayer.name))
 
-			if(fiFault == "zeros"):
-				fiSz = (fiSz * num) / 100
-				fiSz = math.floor(fiSz)
+                        # Get the outputs of the chosen layer
+                        get_output = K.function([model.layers[0].input], [fiLayer.output])
+                        fiLayerOutputs = get_output([x_test])
 
-			# Choose the indices for FI
-			ind = random.sample(range(num), fiSz)
+                        # Unstack elements into a single dimension
+                        elem_shape = fiLayerOutputs[0].shape
+                        fiLayerOutputs[0] = fiLayerOutputs[0].flatten()
+                        num = fiLayerOutputs[0].shape[0]
 
-			# Inject the specified fault into the randomly chosen values
-			if(fiFault == "zeros"):
-				for item in ind:
-					fiLayerOutputs[0][item] = 0.
-			elif(fiFault == "random"):
-				for item in ind:
-					fiLayerOutputs[0][item] = np.random.random()
-			elif(fiFault == "bitflips"):
-				for item in ind:
-					val = fiLayerOutputs[0][item]
-					if(fiConf["Bit"] == "N"):
-						pos = random.randint(0, 31)
-					else:
-						pos = int(fiConf["Bit"])
-					val_ = bitflip(val, pos)
-					fiLayerOutputs[0][item] = val_
+                        if(fiFault == "zeros"):
+                                fiSz = (fiSz * num) / 100
+                                fiSz = math.floor(fiSz)
 
-			# Reshape into original dimensions and get the final prediction
-			fiLayerOutputs[0] = fiLayerOutputs[0].reshape(elem_shape)
-			get_pred = K.function([model.layers[randnum + 1].input], [model.layers[-1].output])
-			pred = get_pred([fiLayerOutputs])
+                        # Choose the indices for FI
+                        ind = random.sample(range(num), fiSz)
 
-			# Uncomment below line and comment next two lines for ImageNet models
-			# return pred
-			labels = np.argmax(pred, axis=-1)
-			return labels[0]
-			
-			logging.info("Completed injections... exiting")
+                        #print("Injecting error in the following indices; " + str(ind))
 
-		elif(fiConf["Mode"] == "multiple"):
+                        # Inject the specified fault into the randomly chosen values
+                        if(fiFault == "zeros"):
+                                for item in ind:
+                                        fiLayerOutputs[0][item] = 0.
+                        elif(fiFault == "random"):
+                                for item in ind:
+                                        fiLayerOutputs[0][item] = np.random.random()
+                        elif(fiFault == "bitflips"):
+                                for item in ind:
+                                        val = fiLayerOutputs[0][item]
+                                        if(fiConf["Bit"] == "N"):
+                                                pos = random.randint(0, 31)
+                                        else:
+                                                pos = int(fiConf["Bit"])
+                                        val_ = bitflip(val, pos)
+                                        fiLayerOutputs[0][item] = val_
 
-			""" Multiple layer fault injection mode """
+                        # Reshape into original dimensions and get the final prediction
+                        fiLayerOutputs[0] = fiLayerOutputs[0].reshape(elem_shape)
 
-			logging.info("Starting fault injection in all layers")
+                        #print("Randnum: " + str(randnum))
+                        #for item in model.layers:
+                        #        print(str(item.name) + "  Input: " + str(item.input) + " Output: " + str(item.output))
 
-			# Retrieve type and amount of fault
-			fiFault = fiConf["Type"]
-			fiSz = fiConf["Amount"]
+                        get_pred = K.function([model.layers[randnum + 1].input], [model.layers[-1].output])
+                        pred = get_pred([fiLayerOutputs])
 
-			# Get the input for which dynamic injection is to be done
-			x_test = kwargs["x_test"]
+                        # Uncomment below line and comment next two lines for ImageNet models
+                        # return pred
+                        labels = np.argmax(pred, axis=-1)
+                        return labels[0]
+                        
+                        logging.info("Completed injections... exiting")
 
-			# Get the outputs of the first layer
-			get_output_0 = K.function([model.layers[0].input], [model.layers[1].output])
-			fiLayerOutputs = get_output_0([x_test])
+                elif(fiConf["Mode"] == "multiple"):
 
-			# Loop through each available layer in the model
-			for n in range(1, len(model.layers) - 2):
+                        """ Multiple layer fault injection mode """
 
-				# Unstack elements into a single dimension
-				elem_shape = fiLayerOutputs[0].shape
-				fiLayerOutputs[0] = fiLayerOutputs[0].flatten()
-				num = fiLayerOutputs[0].shape[0]
-				if(fiFault == "zeros"):
-					fiSz = (fiSz * num) / 100
-					fiSz = math.floor(fiSz)
+                        logging.info("Starting fault injection in all layers")
 
-				# Choose the indices for FI
-				ind = random.sample(range(num), fiSz)
+                        # Retrieve type and amount of fault
+                        fiFault = fiConf["Type"]
+                        fiSz = fiConf["Amount"]
 
-				# Inject the specified fault into the randomly chosen values
-				if(fiFault == "zeros"):
-					for item in ind:
-						fiLayerOutputs[0][item] = 0.
-				elif(fiFault == "random"):
-					for item in ind:
-						fiLayerOutputs[0][item] = np.random.random()
-				elif(fiFault == "bitflips"):
-					for item in ind:
-						val = fiLayerOutputs[0][item]
-						if(fiConf["Bit"] == "N"):
-							pos = random.randint(0, 31)
-						else:
-							pos = int(fiConf["Bit"])
-						val_ = bitflip(val, pos)
-						fiLayerOutputs[0][item] = val_
+                        # Get the input for which dynamic injection is to be done
+                        x_test = kwargs["x_test"]
 
-				# Reshape into original dimensions
-				fiLayerOutputs[0] = fiLayerOutputs[0].reshape(elem_shape)
+                        #for item in model.layers:
+                        #        print(str(item) + "Input: " + str(item.input) + " Output: " + str(item.output))
 
-				"""
-				Check if last but one layer reached;
-				if not, replace fiLayerOutputs with the next prediction to continue
-				"""
-				if(n != (len(model.layers) - 3)):
-					get_output = K.function([model.layers[n+1].input], [model.layers[n+2].output])
-					fiLayerOutputs = get_output([fiLayerOutputs])
+                        # Get the outputs of the first layer
+                        get_output_0 = K.function([model.layers[0].input], [model.layers[0].output])
+                        fiLayerOutputs = get_output_0([x_test])
+                        #print("Name of the 0th layer is: " + str(model.layers[0]))
 
-				# Get final prediction
-				get_pred = K.function([model.layers[len(model.layers)-1].input], [model.layers[-1].output])
-				pred = get_pred([fiLayerOutputs])
+                        # Loop through each available layer in the model
+                        for n in range(0, len(model.layers) - 2):
+                                
+                                #print("Injected FI in layer: " + str(n) + " / " + str(len(model.layers)))
 
-				# Uncomment below line and comment next two lines for ImageNet models
-				# return pred
-				labels = np.argmax(pred, axis=-1)
-				return labels[0]
-				
-				logging.info("Completed injections... exiting")				
+                                if((fiConf["FIMode"].lower() in "random") or (fiConf["LayerName"].lower() in model.layers[n].name)):
+                                        print("Fault injected in layer: " + str(model.layers[n]))
+                                        # Unstack elements into a single dimension
+                                        elem_shape = fiLayerOutputs[0].shape
+                                        fiLayerOutputs[0] = fiLayerOutputs[0].flatten()
+                                        num = fiLayerOutputs[0].shape[0]
+                                        if(fiFault == "zeros"):
+                                                fiSz = (fiSz * num) / 100
+                                                fiSz = math.floor(fiSz)
+
+                                        # Choose the indices for FI
+                                        ind = random.sample(range(num), fiSz)
+
+                                        # Inject the specified fault into the randomly chosen values
+                                        if(fiFault == "zeros"):
+                                                for item in ind:
+                                                        fiLayerOutputs[0][item] = 0.
+                                        elif(fiFault == "random"):
+                                                for item in ind:
+                                                        fiLayerOutputs[0][item] = np.random.random()
+                                        elif(fiFault == "bitflips"):
+                                                for item in ind:
+                                                        val = fiLayerOutputs[0][item]
+                                                        if(fiConf["Bit"] == "N"):
+                                                                pos = random.randint(0, 31)
+                                                        else:
+                                                                pos = int(fiConf["Bit"])
+                                                        val_ = bitflip(val, pos)
+                                                        fiLayerOutputs[0][item] = val_
+
+                                        # Reshape into original dimensions
+                                        fiLayerOutputs[0] = fiLayerOutputs[0].reshape(elem_shape)
+
+                                """
+                                Check if last but one layer reached;
+                                if not, replace fiLayerOutputs with the next prediction to continue
+                                """
+                                if(n < (len(model.layers) - 3)):
+                                        get_output = K.function([model.layers[n+1].input], [model.layers[n+1].output])
+                                        fiLayerOutputs = get_output([fiLayerOutputs])
+                                else:
+                                        break;
+
+                        #print("fiLayerOutput: " + str(fiLayerOutputs[0].shape))
+                        # Get final prediction
+                        get_pred = K.function([model.layers[len(model.layers)-2].input], [model.layers[-1].output])
+                        pred = get_pred([fiLayerOutputs])
+
+                        # Uncomment below line and comment next two lines for ImageNet models
+                        # return pred
+                        labels = np.argmax(pred, axis=-1)
+                        #print("labels: " + str(labels))
+                        return labels[0]
+                        
+                        logging.info("Completed injections... exiting")                         
