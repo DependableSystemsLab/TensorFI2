@@ -228,8 +228,6 @@ class inject():
 							pos = int(fiConf["Bit"])
 						val_ = bitflip(val, pos)
 						target_image[item] = val_
-				elif (fiFault == "none"):
-					target_image = target_image
 
 				# Reshape into original dimensions and get the final prediction
 				target_image = target_image.reshape(elem_shape)
