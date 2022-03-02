@@ -2,13 +2,11 @@ import os
 import sys
 
 import numpy as np
-
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.applications import vgg16, vgg19, resnet, xception, nasnet, mobilenet, mobilenet_v2, \
     inception_resnet_v2, inception_v3, densenet
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 
 from src import tensorfi2 as tfi
-from src.utility import get_fault_injection_configs
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -69,16 +67,12 @@ def get_preprocessed_input_by_model_name(model_name, x_val):
         return densenet.preprocess_input(x_val)
 
 
-
-
-
 def main():
     model_name = sys.argv[1]
     model = get_model_from_name(model_name)
-    # conf_file = sys.argv[2]
-    total_injection = int(sys.argv[2])
-    input_dim = int(sys.argv[3])
-    conf_file = "sample.yaml"
+    conf_file = sys.argv[2]
+    total_injection = int(sys.argv[3])
+    input_dim = int(sys.argv[4])
 
     # Golder run
     path = 'ILSVRC2012_val_00000001.JPEG'
@@ -89,12 +83,10 @@ def main():
     out = model.predict(image).argmax(axis=-1)[0]
     print("Fault free prediction " + str(out))
 
-    model_graph, super_nodes = get_fault_injection_configs(model)
-
     # Inject fault to single image
     print("Injecting faults to single image")
     for i in range(total_injection):
-        res = tfi.inject(model=model, x_test=image, confFile=conf_file, model_graph=model_graph, super_nodes=super_nodes)
+        res = tfi.inject(model=model, x_test=image, confFile=conf_file)
         print(res.final_label)
 
     # Inject fault to batch images
@@ -105,8 +97,7 @@ def main():
         image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
         batch_image = np.concatenate((image, image), axis=0)
         batch_image = get_preprocessed_input_by_model_name(model_name, batch_image)
-        res = tfi.inject(model=model, x_test=batch_image, confFile=conf_file, model_graph=model_graph,
-                         super_nodes=super_nodes)
+        res = tfi.inject(model=model, x_test=batch_image, confFile=conf_file)
         print(res.final_label)
     print("Fault injection done")
 

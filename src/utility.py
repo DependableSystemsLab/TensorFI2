@@ -6,7 +6,7 @@ from src.graph_node import GraphNode
 def compute_layer_output(layer_dependency_graph, model_layers, original_input, layer_output_dict, layer):
     """
     This function computes the layer output. It searches for the longest consecutive model portion
-    to get prediction. It recursively computes input if any layer has multiple inputs. It then stores
+    to get the prediction. It recursively computes input if any layer has multiple inputs. It then stores
     the layer output in the output dictionary.
 
     :param layer_dependency_graph: layer dependency graph of model
@@ -41,11 +41,12 @@ def compute_layer_output(layer_dependency_graph, model_layers, original_input, l
 def compute_fault_injected_prediction(layer_dependency_graph, super_nodes, model_layers,
                                       injection_layer_index, injected_output, original_input):
     """
-    Calculate the model final predicted output using the fault injected output and original input.
-    It stores the layer output results in a dictionary to get rid of recomputation. It initially
-    computes prediction of immediate previous super layer and store in dict because all the branching
-    starts from the previous super layer. It then calculates the inputs of next super layer recursively
-    with memorization. Using those inputs, it finally calculates final prediction.
+    Calculate the model's final prediction using the fault-injected layer outputs and original input data.
+    It stores the layer output results in a dictionary to eliminate recomputation. It initially computes
+    the prediction of the immediate previous super layer and stores it in the dictionary because all the
+    branchingstarts from the previous super layer. Then it calculates the inputs of the next super layer
+    recursively with memorization to get the final prediction.
+
 
     :param layer_dependency_graph: layer dependency graph of model
     :param super_nodes: list of all super nodes
@@ -118,7 +119,7 @@ def map_layer_output_name_with_index(model_layers):
 
 def get_super_nodes(layer_dependency_graph, start_node, end_node, super_node_dict):
     """
-    Returns super nodes list from start_node position to end_node position of layer_dependency_graph
+    Returns super nodes list from start_node position to end_node position of layer_dependency_graph.
 
     :param layer_dependency_graph: dependency graph of the model
     :param start_node: starting layer index from where super node searching starts
@@ -160,7 +161,7 @@ def get_common_elements(element_list):
 
 def get_next_super_layer(layer_dependency_graph, super_nodes, current_layer):
     """
-    Return the immediate next super layer of current layer
+    Return the immediate next super layer of current layer.
 
     :param layer_dependency_graph: dependency graph of the model
     :param super_nodes: list of all super nodes
@@ -176,7 +177,7 @@ def get_next_super_layer(layer_dependency_graph, super_nodes, current_layer):
 
 def get_previous_super_layer(layer_dependency_graph, super_nodes, current_layer):
     """
-    Return the immediate previous super layer of current layer
+    Return the immediate previous super layer of current layer.
 
     :param layer_dependency_graph: dependency graph of the model
     :param super_nodes: list of all super nodes
@@ -192,10 +193,10 @@ def get_previous_super_layer(layer_dependency_graph, super_nodes, current_layer)
 
 def draw_graph(layer_dependency_graph, super_nodes, name):
     """
-    This method is used to draw the directed dependency graph. In the graph
-    super nodes are filled with red color. It is helpful to check whether the
-    drawn dependency graph and super nodes are correct or not. It also eases
-    the debugging process.
+    This method is used to draw the directed dependency graph. In the graph, supernodes are filled with red color. It
+    is helpful to check whether the drawn dependency graph and supernodes are correct or not. It also eases the
+    debugging process.
+
 
     :param layer_dependency_graph: graph generated from model indicating input and output layers.
     :param super_nodes: The nodes which are central to the model
@@ -223,7 +224,7 @@ def draw_graph(layer_dependency_graph, super_nodes, name):
 
 def get_fault_injection_configs(model, graph_drawing=False):
     """
-    For each model we need to develop a dependency graph of inputs and outputs of all the
+    For each model, we need to develop a dependency graph of inputs and outputs of all the
     layers. We also compute the super nodes list. Dependency graph and super nodes list are
     model specific, so we can compute them before starting fault injection.
 

@@ -10,7 +10,7 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 
 from src import config
-from src.utility import compute_fault_injected_prediction
+from src.utility import compute_fault_injected_prediction, get_fault_injection_configs
 
 
 def bitflip(f, pos):
@@ -28,7 +28,7 @@ def bitflip(f, pos):
 
 class inject():
 	def __init__(
-		self, model, confFile, model_graph, super_nodes, log_level="ERROR", **kwargs
+		self, model, confFile, log_level="ERROR", **kwargs
 		):
 		# Logging setup
 		logging.basicConfig()
@@ -38,8 +38,9 @@ class inject():
 		# Retrieve config params
 		fiConf = config.config(confFile)
 		self.Model = model # No more passing or using a session variable in TF v2
-		self.model_graph = model_graph
-		self.super_nodes = super_nodes
+		"""Model graph and super nodes are model related. So, if multiple fault injection on same model is required, 
+		then we can compute them priorly and pass them as parameter to this function to make the process faster """
+		self.model_graph, self.super_nodes = get_fault_injection_configs(model)
 
 		# Call the corresponding FI function
 		fiFunc = getattr(self, fiConf["Target"])
