@@ -1,15 +1,17 @@
 #!/usr/bin/python
 
-import os, logging
-
-import tensorflow as tf
+import logging
+import math
+import random
 from struct import pack, unpack
 
 import numpy as np
-from tensorflow.keras import Model, layers
+import tensorflow as tf
 from tensorflow.keras import backend as K
-import random, math
+
 from src import config
+from src.utility import compute_fault_injected_prediction, get_fault_injection_configs
+
 
 def bitflip(f, pos):
 	
@@ -23,11 +25,11 @@ def bitflip(f, pos):
 	f = unpack('f', f_)
 	return f[0]
 
+
 class inject():
 	def __init__(
 		self, model, confFile, log_level="ERROR", **kwargs
 		):
-
 		# Logging setup
 		logging.basicConfig()
 		logging.getLogger().setLevel(log_level)
@@ -36,10 +38,14 @@ class inject():
 		# Retrieve config params
 		fiConf = config.config(confFile)
 		self.Model = model # No more passing or using a session variable in TF v2
+		"""Model graph and super nodes are model related. So, if multiple fault injection on same model is required, 
+		then we can compute them priorly and pass them as parameter to this function to make the process faster """
+		self.model_graph, self.super_nodes = get_fault_injection_configs(model)
 
 		# Call the corresponding FI function
 		fiFunc = getattr(self, fiConf["Target"])
-		fiFunc(model, fiConf, **kwargs)
+		self.final_label = fiFunc(model, fiConf, **kwargs)
+
 
 	def layer_states(self, model, fiConf, **kwargs):
 		
@@ -180,7 +186,9 @@ class inject():
 			x_test = kwargs["x_test"]
 
 			# Choose a random layer for injection
-			randnum = random.randint(0, len(model.layers) - 2)
+			randnum = random.randint(0, len(model.layers) - 3) + 1
+
+			# injection_layer_index = 30
 
 			fiLayer = model.layers[randnum]
 
@@ -189,45 +197,50 @@ class inject():
 			fiLayerOutputs = get_output([x_test])
 
 			# Unstack elements into a single dimension
-			elem_shape = fiLayerOutputs[0].shape
-			fiLayerOutputs[0] = fiLayerOutputs[0].flatten()
-			num = fiLayerOutputs[0].shape[0]
+			original_output_list = fiLayerOutputs[0]
+			batch_size = len(original_output_list)
+			faulty_output_list = None
+			for i in range(batch_size):
+				target_image = original_output_list[i]
+				elem_shape = target_image.shape
+				target_image = target_image.flatten()
+				num = target_image.shape[0]
+				if (fiFault == "zeros"):
+					fiSz = (fiSz * num) / 100
+					fiSz = math.floor(fiSz)
 
-			if(fiFault == "zeros"):
-				fiSz = (fiSz * num) / 100
-				fiSz = math.floor(fiSz)
+				# Choose the indices for FI
+				ind = random.sample(range(num), fiSz)
 
-			# Choose the indices for FI
-			ind = random.sample(range(num), fiSz)
+				# Inject the specified fault into the randomly chosen values
+				if (fiFault == "zeros"):
+					for item in ind:
+						target_image[item] = 0.
+				elif (fiFault == "random"):
+					for item in ind:
+						target_image[item] = np.random.random()
+				elif (fiFault == "bitflips"):
+					for item in ind:
+						val = target_image[item]
+						if (fiConf["Bit"] == "N"):
+							pos = random.randint(0, 31)
+						else:
+							pos = int(fiConf["Bit"])
+						val_ = bitflip(val, pos)
+						target_image[item] = val_
 
-			# Inject the specified fault into the randomly chosen values
-			if(fiFault == "zeros"):
-				for item in ind:
-					fiLayerOutputs[0][item] = 0.
-			elif(fiFault == "random"):
-				for item in ind:
-					fiLayerOutputs[0][item] = np.random.random()
-			elif(fiFault == "bitflips"):
-				for item in ind:
-					val = fiLayerOutputs[0][item]
-					if(fiConf["Bit"] == "N"):
-						pos = random.randint(0, 31)
-					else:
-						pos = int(fiConf["Bit"])
-					val_ = bitflip(val, pos)
-					fiLayerOutputs[0][item] = val_
+				# Reshape into original dimensions and get the final prediction
+				target_image = target_image.reshape(elem_shape)
+				target_image = np.expand_dims(target_image, axis=0)
+				if faulty_output_list is None:
+					faulty_output_list = target_image
+				else:
+					faulty_output_list = np.concatenate((faulty_output_list, target_image), axis=0)
 
-			# Reshape into original dimensions and get the final prediction
-			fiLayerOutputs[0] = fiLayerOutputs[0].reshape(elem_shape)
-			get_pred = K.function([model.layers[randnum + 1].input], [model.layers[-1].output])
-			pred = get_pred([fiLayerOutputs])
-
-			# Uncomment below line and comment next two lines for ImageNet models
-			# return pred
+			fiLayerOutputs[0] = faulty_output_list
+			pred = compute_fault_injected_prediction(self.model_graph, self.super_nodes, model.layers, randnum, fiLayerOutputs, x_test)
 			labels = np.argmax(pred, axis=-1)
 			return labels[0]
-			
-			logging.info("Completed injections... exiting")
 
 		elif(fiConf["Mode"] == "multiple"):
 
